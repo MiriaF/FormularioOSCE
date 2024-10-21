@@ -82,302 +82,68 @@
       margin-top: 20px;
     }
     table, th, td {
-      border: 1px solid #ddd;
-      text-align: center;
+      border: 1px solid #ccc;
     }
     th, td {
-      padding: 8px;
+      padding: 10px;
+      text-align: left;
     }
-    .navigation-buttons {
+    button {
+      padding: 10px 15px;
+      background-color: #4CAF50;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      margin-top: 10px;
+    }
+    button:hover {
+      background-color: #45a049;
+    }
+    .nav-buttons {
       display: flex;
       justify-content: space-between;
       margin-top: 20px;
-    }
-    .btn {
-      padding: 10px 15px;
-      border: none;
-      border-radius: 4px;
-      color: white;
-      cursor: pointer;
-    }
-    .btn.navigate {
-      background-color: #4CAF50;
-    }
-    .btn.previous {
-      background-color: #007BFF;
-    }
-    .btn.next {
-      background-color: #FFA500;
-    }
-    .btn.export {
-      background-color: #007BFF;
-      margin-top: 20px;
-    }
-    .btn:hover {
-      opacity: 0.8;
     }
   </style>
 </head>
 <body>
 
-<!-- Botão para abrir o menu lateral -->
-<span class="open-menu-btn" onclick="openMenu()">&#9776;</span>
-
-<!-- Menu lateral retrátil -->
-<div id="studentMenu" class="menu">
-  <a href="javascript:void(0)" class="close-btn" onclick="closeMenu()">&times;</a>
-  <div id="studentList">
-    <!-- Lista de alunos será carregada aqui -->
-  </div>
+<div class="open-menu-btn" onclick="toggleMenu()">&#9776;</div>
+<div class="menu" id="sideMenu">
+  <a href="javascript:void(0)" class="close-btn" onclick="toggleMenu()">&times;</a>
+  <h2 style="color: white; text-align: center;">Alunos</h2>
+  <div id="studentsList"></div>
 </div>
 
-<div id="formContainer" class="container">
+<div class="container" id="mainContainer">
   <h1>Avaliação dos Alunos</h1>
   
-  <div class="form-group">
-    <label for="studentName">Nome do Aluno:</label>
-    <input type="text" id="studentName" readonly />
+  <div id="evaluationForm">
+    <div class="form-group">
+      <label for="studentName">Nome do Aluno:</label>
+      <input type="text" id="studentName" readonly>
+    </div>
+    <div class="form-group">
+      <label for="studentRa">RA do Aluno:</label>
+      <input type="text" id="studentRa" readonly>
+    </div>
+    <div class="questions-container" id="questionsContainer">
+      <!-- Questões aparecerão aqui -->
+    </div>
+    
+    <div class="nav-buttons">
+      <button id="prevBtn" onclick="prevStudent()">Anterior</button>
+      <button id="nextBtn" onclick="nextStudent()">Próximo</button>
+    </div>
+    <button id="exportBtn" onclick="exportResults()">Exportar Resultados</button>
   </div>
-  <div class="form-group">
-    <label for="studentRA">RA do Aluno:</label>
-    <input type="text" id="studentRA" readonly />
-  </div>
-
-  <table>
-    <thead>
-      <tr>
-        <th>#</th>
-        <th>Pergunta</th>
-        <th>Sim</th>
-        <th>Parcial</th>
-        <th>Não</th>
-      </tr>
-    </thead>
-    <tbody id="questionsContainer">
-      <!-- Questões serão carregadas aqui -->
-    </tbody>
-  </table>
-
-  <div class="navigation-buttons">
-    <button class="btn previous" onclick="prevStudent()">Aluno Anterior</button>
-    <button class="btn next" onclick="nextStudent()">Próximo Aluno</button>
-  </div>
-
-  <button class="btn export" onclick="exportResults()">Exportar Resultados</button>
-
-  <div id="output"></div>
 </div>
 
-<script>
-  let students = JSON.parse(localStorage.getItem("alunosData")) || [];
-  let currentIndex = 0;
-  let studentsResults = JSON.parse(localStorage.getItem("studentsResults")) || [];
-
-  // Função para abrir o menu lateral
-  function openMenu() {
-    document.getElementById("studentMenu").style.width = "250px";
-    document.getElementById("formContainer").style.marginLeft = "250px";
-    document.body.style.marginLeft = "250px";
-  }
-
-  // Função para fechar o menu lateral
-  function closeMenu() {
-    document.getElementById("studentMenu").style.width = "0";
-    document.getElementById("formContainer").style.marginLeft = "0";
-    document.body.style.marginLeft = "0";
-  }
-  import { getDatabase, ref, set } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-database.js";
-
-const db = getDatabase(app);  // Inicializando o Realtime Database
-
-// Salva as respostas do aluno atual no Firebase
-// Função para salvar as respostas do aluno no Firebase
-async function saveCurrentStudentResults() {
-  let studentAnswers = [];
-  
-  const questions = JSON.parse(localStorage.getItem("configuredQuestions"));
-  
-  for (let i = 0; i < questions.length; i++) {
-    const radios = document.getElementsByName(`question${i}`);
-    let selectedValue = null;
-
-    radios.forEach(radio => {
-      if (radio.checked) {
-        selectedValue = parseFloat(radio.value);
-      }
-    });
-
-    studentAnswers.push({
-      questionId: i,
-      answer: selectedValue !== null ? selectedValue : 0
-    });
-  }
-
-  // Salva as respostas no Firebase
-  try {
-    await set(ref(db, `students/${students[currentIndex].ra}`), {
-      answers: studentAnswers
-    });
-    console.log("Respostas salvas com sucesso!");
-  } catch (error) {
-    console.error("Erro ao salvar respostas:", error);
-  }
-}
-
-import { getDatabase, ref, get, child } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-database.js";
-
-const dbRef = ref(getDatabase());
-
-// Função para carregar as respostas dos alunos do Firebase
-// Exibe as respostas anteriores do aluno selecionado
-// Função para carregar as respostas do aluno selecionado do Firebase
-
-// Função para carregar as respostas do aluno selecionado do Firebase
-async function loadStudentAnswers(index) {
-  // Limpa os estados do formulário
-  const questions = JSON.parse(localStorage.getItem("configuredQuestions"));
-  
-  // Reseta os rádios antes de carregar as novas respostas
-  for (let i = 0; i < questions.length; i++) {
-    const radios = document.getElementsByName(`question${i}`);
-    radios.forEach(radio => {
-      radio.checked = false; // Desmarca todos os rádios
-    });
-  }
-
-  try {
-    const snapshot = await get(child(ref(db), `students/${students[index].ra}`));
-
-    if (snapshot.exists()) {
-      const previousAnswers = snapshot.val().answers || [];
-
-      // Carrega as respostas no formulário
-      for (let i = 0; i < previousAnswers.length; i++) {
-        const radios = document.getElementsByName(`question${i}`);
-
-        radios.forEach(radio => {
-          if (parseFloat(radio.value) === previousAnswers[i].answer) {
-            radio.checked = true;
-          }
-        });
-      }
-
-      console.log("Respostas carregadas com sucesso!");
-    } else {
-      console.log("Nenhuma resposta encontrada para este aluno.");
-    }
-  } catch (error) {
-    console.error("Erro ao carregar respostas:", error);
-  }
-}
-
-  // Exibe o nome do aluno selecionado e suas informações
-  function showStudent(index) {
-    if (students.length === 0) return;
-    
-    document.getElementById('studentName').value = students[index].nome;
-    document.getElementById('studentRA').value = students[index].ra;
-
-    loadStudentAnswers(index);  // Carrega as respostas anteriores do aluno
-  }
-
- // Função para navegar para o próximo aluno
-async function nextStudent() {
-  await saveCurrentStudentResults();  // Salva as respostas do aluno atual
-
-  if (currentIndex < students.length - 1) {
-    currentIndex++;
-    showStudent(currentIndex);
-  } else {
-    alert("Este é o último aluno.");
-  }
-}
-
-// Função para navegar para o aluno anterior
-async function prevStudent() {
-  await saveCurrentStudentResults();  // Salva as respostas do aluno atual
-
-  if (currentIndex > 0) {
-    currentIndex--;
-    showStudent(currentIndex);
-  } else {
-    alert("Este é o primeiro aluno.");
-  }
-}
-
-  // Carrega as questões na tabela
-  function loadQuestions() {
-    const questionsContainer = document.getElementById('questionsContainer');
-    const questions = JSON.parse(localStorage.getItem("configuredQuestions"));
-
-    if (questions && questions.length > 0) {
-      questions.forEach((q, index) => {
-        const row = document.createElement('tr');
-        row.innerHTML = `
-          <td>${index + 1}</td>
-          <td>${q.question}</td>
-          <td><input type="radio" name="question${index}" value="${q.weight}"></td>
-          <td><input type="radio" name="question${index}" value="${q.weight / 2}"></td>
-          <td><input type="radio" name="question${index}" value="0"></td>
-        `;
-        questionsContainer.appendChild(row);
-      });
-    }
-  }
-
-  // Carrega os alunos em ordem alfabética no menu lateral
-  function loadStudentsMenu() {
-    const studentList = document.getElementById('studentList');
-    studentList.innerHTML = ''; // Limpa o menu antes de carregar
-    
-    // Ordena alunos por nome
-    students.sort((a, b) => a.nome.localeCompare(b.nome));
-
-    students.forEach((student, index) => {
-      const studentLink = document.createElement('a');
-      studentLink.textContent = student.nome;
-      studentLink.href = "javascript:void(0)";
-      studentLink.onclick = () => {
-        saveCurrentStudentResults();  // Salva as respostas do aluno atual antes de mudar
-        currentIndex = index;
-        showStudent(currentIndex);
-        closeMenu(); // Fecha o menu ao selecionar um aluno
-      };
-      studentList.appendChild(studentLink);
-    });
-  }
-
-  // Função para exportar resultados para um arquivo Excel
-  function exportResults() {
-    let xlsContent = `<table border="1"><tr><th>Nome</th><th>RA</th><th>Nota Total</th></tr>`;
-    
-    studentsResults.forEach(result => {
-      xlsContent += `<tr><td>${result.student.nome}</td><td>${result.student.ra}</td><td>${result.answers.reduce((a, b) => a + b, 0)}</td></tr>`;
-    });
-
-    xlsContent += `</table>`;
-
-    const blob = new Blob([xlsContent], { type: 'application/vnd.ms-excel' });
-    const link = document.createElement("a");
-    link.href = URL.createObjectURL(blob);
-    link.download = "resultados_avaliacao.xls";
-    document.body.appendChild(link);
-    link.click();
-  }
-
-  // Inicializa a página
-  window.onload = () => {
-    loadQuestions();
-    loadStudentsMenu();
-    showStudent(currentIndex);  // Mostra o primeiro aluno
-  };
-</script>
 <script type="module">
-  // Importar as funções necessárias do Firebase
   import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-app.js";
   import { getDatabase, ref, set, get, child } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-database.js";
 
-  // Configuração do Firebase
   const firebaseConfig = {
     apiKey: "AIzaSyDHwRpXLz0EAeZju0NB0CRC6UNCkK6tlAo",
     authDomain: "formularioosce.firebaseapp.com",
@@ -389,9 +155,189 @@ async function prevStudent() {
     measurementId: "G-381NH814X6"
   };
 
-  // Inicializa o Firebase
   const app = initializeApp(firebaseConfig);
   const db = getDatabase(app);
+  
+  let students = JSON.parse(localStorage.getItem("alunosData")) || [];
+  let currentIndex = 0;
+  let studentsResults = [];
+
+  window.onload = function() {
+    populateStudentList();
+    showStudent(currentIndex);
+  };
+
+  function toggleMenu() {
+    const sideMenu = document.getElementById("sideMenu");
+    if (sideMenu.style.width === "250px") {
+      sideMenu.style.width = "0";
+      document.body.style.marginLeft = "0";
+    } else {
+      sideMenu.style.width = "250px";
+      document.body.style.marginLeft = "250px";
+    }
+  }
+
+  function populateStudentList() {
+    const studentsList = document.getElementById("studentsList");
+    students.forEach((student, index) => {
+      const studentItem = document.createElement('a');
+      studentItem.href = "javascript:void(0)";
+      studentItem.innerText = `${student.nome} - ${student.ra}`;
+      studentItem.onclick = () => {
+        currentIndex = index;
+        showStudent(currentIndex);
+        toggleMenu();
+      };
+      studentsList.appendChild(studentItem);
+    });
+  }
+
+  async function showStudent(index) {
+    if (index < 0 || index >= students.length) return;
+
+    const student = students[index];
+    document.getElementById('studentName').value = student.nome;
+    document.getElementById('studentRa').value = student.ra;
+
+    loadStudentAnswers(index);
+    displayQuestions();
+  }
+
+  function displayQuestions() {
+    const questions = JSON.parse(localStorage.getItem("configuredQuestions")) || [];
+    const questionsContainer = document.getElementById('questionsContainer');
+    questionsContainer.innerHTML = ''; // Limpa as questões antes de exibir novas
+
+    questions.forEach((question, index) => {
+      const questionItem = document.createElement('div');
+      questionItem.classList.add('form-group');
+      questionItem.innerHTML = `
+        <label>${question.question} (Peso: ${question.weight})</label>
+        <div>
+          <input type="radio" name="question${index}" value="${question.weight}">
+          <label>Resposta 1</label>
+          <input type="radio" name="question${index}" value="${question.weight}">
+          <label>Resposta 2</label>
+        </div>
+      `;
+      questionsContainer.appendChild(questionItem);
+    });
+  }
+
+  async function nextStudent() {
+    await saveCurrentStudentResults();
+
+    if (currentIndex < students.length - 1) {
+      currentIndex++;
+      await showStudent(currentIndex);
+    } else {
+      alert("Este é o último aluno.");
+    }
+  }
+
+  async function prevStudent() {
+    await saveCurrentStudentResults();
+
+    if (currentIndex > 0) {
+      currentIndex--;
+      await showStudent(currentIndex);
+    } else {
+      alert("Este é o primeiro aluno.");
+    }
+  }
+
+  async function saveCurrentStudentResults() {
+    let studentAnswers = [];
+    const questions = JSON.parse(localStorage.getItem("configuredQuestions"));
+
+    for (let i = 0; i < questions.length; i++) {
+      const radios = document.getElementsByName(`question${i}`);
+      let selectedValue = null;
+
+      radios.forEach(radio => {
+        if (radio.checked) {
+          selectedValue = parseFloat(radio.value);
+        }
+      });
+
+      studentAnswers.push({
+        questionId: i,
+        answer: selectedValue !== null ? selectedValue : null
+      });
+    }
+
+    // Salva as respostas no Firebase
+    try {
+      await set(ref(db, `students/${students[currentIndex].ra}`), {
+        answers: studentAnswers
+      });
+      console.log("Respostas salvas com sucesso!");
+    } catch (error) {
+      console.error("Erro ao salvar respostas:", error);
+    }
+  }
+
+  async function loadStudentAnswers(index) {
+    const questions = JSON.parse(localStorage.getItem("configuredQuestions"));
+
+    // Reseta os rádios antes de carregar as novas respostas
+    for (let i = 0; i < questions.length; i++) {
+      const radios = document.getElementsByName(`question${i}`);
+      radios.forEach(radio => {
+        radio.checked = false; // Desmarca todos os rádios
+      });
+    }
+
+    try {
+      const snapshot = await get(child(ref(db), `students/${students[index].ra}`));
+
+      if (snapshot.exists()) {
+        const previousAnswers = snapshot.val().answers || [];
+
+        // Carrega as respostas no formulário
+        for (let i = 0; i < previousAnswers.length; i++) {
+          const radios = document.getElementsByName(`question${previousAnswers[i].questionId}`);
+          
+          radios.forEach(radio => {
+            if (parseFloat(radio.value) === previousAnswers[i].answer) {
+              radio.checked = true;
+            }
+          });
+        }
+
+        console.log("Respostas carregadas com sucesso!");
+      } else {
+        console.log("Nenhuma resposta encontrada para este aluno.");
+      }
+    } catch (error) {
+      console.error("Erro ao carregar respostas:", error);
+    }
+  }
+
+  function exportResults() {
+    if (studentsResults.length === 0) {
+      alert("Nenhum resultado para exportar.");
+      return;
+    }
+
+    let xlsContent = `<table border="1"><tr><th>Nome</th><th>RA</th><th>Nota Total</th></tr>`;
+
+    studentsResults.forEach(result => {
+      const totalScore = result.answers ? result.answers.reduce((a, b) => a + b.answer, 0) : 0;
+      xlsContent += `<tr><td>${result.student.nome}</td><td>${result.student.ra}</td><td>${totalScore}</td></tr>`;
+    });
+
+    xlsContent += `</table>`;
+
+    const blob = new Blob([xlsContent], { type: 'application/vnd.ms-excel' });
+    const link = document.createElement("a");
+    link.href = URL.createObjectURL(blob);
+    link.download = "resultados_avaliacao.xls";
+    document.body.appendChild(link);
+    link.click();
+  }
 </script>
+
 </body>
 </html>
