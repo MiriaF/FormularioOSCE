@@ -206,14 +206,21 @@
   }
 
   // Exibe as respostas anteriores do aluno selecionado
-  function loadStudentAnswers(index) {
-    const previousAnswers = studentsResults[index]?.answers || [];
+function loadStudentAnswers(index) {
+  const previousAnswers = studentsResults[index]?.answers || [];
 
-    const radios = document.querySelectorAll('input[type="radio"]');
-    radios.forEach((radio, i) => {
-      radio.checked = previousAnswers[i] === parseFloat(radio.value);
+  // Itera sobre as questões para carregar as respostas
+  for (let i = 0; i < previousAnswers.length; i++) {
+    const radios = document.getElementsByName(`question${i}`);
+    radios.forEach(radio => {
+      // Marca o rádio correspondente ao valor da resposta anterior
+      if (parseFloat(radio.value) === previousAnswers[i]) {
+        radio.checked = true;
+      }
     });
   }
+}
+
 
   // Exibe o nome do aluno selecionado e suas informações
   function showStudent(index) {
