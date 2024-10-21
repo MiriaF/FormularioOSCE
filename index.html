@@ -127,7 +127,9 @@
     
     questionsContainer.appendChild(questionItem);
   }
+  
   document.getElementById('fileUpload').addEventListener('change', handleFileUpload);
+  
   function handleFileUpload(event) {
     const file = event.target.files[0];
     const reader = new FileReader();
@@ -184,6 +186,6 @@
   }
 </script>
 
-
 </body>
 </html>
+
