@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Avaliação dos Alunos</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 0;
+      background-color: #f4f4f4;
+      transition: margin-left 0.3s;
+    }
+    .container {
+      margin: 20px;
+      background: white;
+      padding: 20px;
+      border-radius: 8px;
+      box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+      transition: margin-left 0.3s;
+    }
+    h1 {
+      text-align: center;
+      color: #333;
+    }
+    .menu {
+      height: 100vh;
+      width: 0;
+      position: fixed;
+      top: 0;
+      left: 0;
+      background-color: #333;
+      padding-top: 20px;
+      transition: width 0.3s;
+      overflow-x: hidden;
+      z-index: 1;
+    }
+    .menu a {
+      padding: 10px 15px;
+      display: block;
+      font-size: 18px;
+      color: white;
+      text-decoration: none;
+      transition: background-color 0.2s;
+    }
+    .menu a:hover {
+      background-color: #575757;
+    }
+    .menu .close-btn {
+      position: absolute;
+      top: 10px;
+      right: 15px;
+      font-size: 30px;
+    }
+    .open-menu-btn {
+      font-size: 30px;
+      cursor: pointer;
+      position: fixed;
+      top: 20px;
+      left: 20px;
+      z-index: 2;
+      color: #333;
+    }
+    .form-group {
+      margin-bottom: 20px;
+    }
+    label {
+      font-weight: bold;
+      display: block;
+      margin-bottom: 5px;
+    }
+    input[type="text"] {
+      width: 100%;
+      padding: 8px;
+      border-radius: 4px;
+      border: 1px solid #ccc;
+      margin-bottom: 10px;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 20px;
+    }
+    table, th, td {
+      border: 1px solid #ddd;
+      text-align: center;
+    }
+    th, td {
+      padding: 8px;
+    }
+    .navigation-buttons {
+      display: flex;
+      justify-content: space-between;
+      margin-top: 20px;
+    }
+    .btn {
+      padding: 10px 15px;
+      border: none;
+      border-radius: 4px;
+      color: white;
+      cursor: pointer;
+    }
+    .btn.navigate {
+      background-color: #4CAF50;
+    }
+    .btn.previous {
+      background-color: #007BFF;
+    }
+    .btn.next {
+      background-color: #FFA500;
+    }
+    .btn.export {
+      background-color: #007BFF;
+      margin-top: 20px;
+    }
+    .btn:hover {
+      opacity: 0.8;
+    }
+  </style>
+</head>
+<body>
+
+<!-- Botão para abrir o menu lateral -->
+<span class="open-menu-btn" onclick="openMenu()">&#9776;</span>
+
+<!-- Menu lateral retrátil -->
+<div id="studentMenu" class="menu">
+  <a href="javascript:void(0)" class="close-btn" onclick="closeMenu()">&times;</a>
+  <div id="studentList">
+    <!-- Lista de alunos será carregada aqui -->
+  </div>
+</div>
+
+<div id="formContainer" class="container">
+  <h1>Avaliação dos Alunos</h1>
+  
+  <div class="form-group">
+    <label for="studentName">Nome do Aluno:</label>
+    <input type="text" id="studentName" readonly />
+  </div>
+  <div class="form-group">
+    <label for="studentRA">RA do Aluno:</label>
+    <input type="text" id="studentRA" readonly />
+  </div>
+
+  <table>
+    <thead>
+      <tr>
+        <th>#</th>
+        <th>Pergunta</th>
+        <th>Sim</th>
+        <th>Parcial</th>
+        <th>Não</th>
+      </tr>
+    </thead>
+    <tbody id="questionsContainer">
+      <!-- Questões serão carregadas aqui -->
+    </tbody>
+  </table>
+
+  <div class="navigation-buttons">
+    <button class="btn previous" onclick="prevStudent()">Aluno Anterior</button>
+    <button class="btn next" onclick="nextStudent()">Próximo Aluno</button>
+  </div>
+
+  <button class="btn export" onclick="exportResults()">Exportar Resultados</button>
+
+  <div id="output"></div>
+</div>
+
+<script>
+  let students = JSON.parse(localStorage.getItem("alunosData")) || [];
+  let currentIndex = 0;
+  let studentsResults = JSON.parse(localStorage.getItem("studentsResults")) || [];
+
+  // Função para abrir o menu lateral
+  function openMenu() {
+    document.getElementById("studentMenu").style.width = "250px";
+    document.getElementById("formContainer").style.marginLeft = "250px";
+    document.body.style.marginLeft = "250px";
+  }
+
+  // Função para fechar o menu lateral
+  function closeMenu() {
+    document.getElementById("studentMenu").style.width = "0";
+    document.getElementById("formContainer").style.marginLeft = "0";
+    document.body.style.marginLeft = "0";
+  }
+
+  // Salva as respostas do aluno atual antes de trocar
+  function saveCurrentStudentResults() {
+    let studentAnswers = [];
+    const radios = document.querySelectorAll('input[type="radio"]:checked');
+    radios.forEach(radio => {
+      studentAnswers.push(parseFloat(radio.value));
+    });
+
+    // Armazena as respostas no array studentsResults
+    studentsResults[currentIndex] = {
+      student: students[currentIndex],
+      answers: studentAnswers
+    };
+    
+    // Salva os resultados no localStorage para persistência
+    localStorage.setItem("studentsResults", JSON.stringify(studentsResults));
+  }
+
+  // Exibe as respostas anteriores do aluno selecionado
+  function loadStudentAnswers(index) {
+    const previousAnswers = studentsResults[index]?.answers || [];
+
+    const radios = document.querySelectorAll('input[type="radio"]');
+    radios.forEach((radio, i) => {
+      radio.checked = previousAnswers[i] === parseFloat(radio.value);
+    });
+  }
+
+  // Exibe o nome do aluno selecionado e suas informações
+  function showStudent(index) {
+    if (students.length === 0) return;
+    
+    document.getElementById('studentName').value = students[index].nome;
+    document.getElementById('studentRA').value = students[index].ra;
+
+    loadStudentAnswers(index);  // Carrega as respostas anteriores do aluno
+  }
+
+  // Função para navegar para o próximo aluno
+  function nextStudent() {
+    saveCurrentStudentResults();  // Salva as respostas do aluno atual
+
+    if (currentIndex < students.length - 1) {
+      currentIndex++;
+      showStudent(currentIndex);
+    } else {
+      alert("Este é o último aluno.");
+    }
+  }
+
+  // Função para navegar para o aluno anterior
+  function prevStudent() {
+    saveCurrentStudentResults();  // Salva as respostas do aluno atual
+
+    if (currentIndex > 0) {
+      currentIndex--;
+      showStudent(currentIndex);
+    } else {
+      alert("Este é o primeiro aluno.");
+    }
+  }
+
+  // Carrega as questões na tabela
+  function loadQuestions() {
+    const questionsContainer = document.getElementById('questionsContainer');
+    const questions = JSON.parse(localStorage.getItem("configuredQuestions"));
+
+    if (questions && questions.length > 0) {
+      questions.forEach((q, index) => {
+        const row = document.createElement('tr');
+        row.innerHTML = `
+          <td>${index + 1}</td>
+          <td>${q.question}</td>
+          <td><input type="radio" name="question${index}" value="${q.weight}"></td>
+          <td><input type="radio" name="question${index}" value="${q.weight / 2}"></td>
+          <td><input type="radio" name="question${index}" value="0"></td>
+        `;
+        questionsContainer.appendChild(row);
+      });
+    }
+  }
+
+  // Carrega os alunos em ordem alfabética no menu lateral
+  function loadStudentsMenu() {
+    const studentList = document.getElementById('studentList');
+    studentList.innerHTML = ''; // Limpa o menu antes de carregar
+    
+    // Ordena alunos por nome
+    students.sort((a, b) => a.nome.localeCompare(b.nome));
+
+    students.forEach((student, index) => {
+      const studentLink = document.createElement('a');
+      studentLink.textContent = student.nome;
+      studentLink.href = "javascript:void(0)";
+      studentLink.onclick = () => {
+        saveCurrentStudentResults();  // Salva as respostas do aluno atual antes de mudar
+        currentIndex = index;
+        showStudent(currentIndex);
+        closeMenu(); // Fecha o menu ao selecionar um aluno
+      };
+      studentList.appendChild(studentLink);
+    });
+  }
+
+  // Função para exportar resultados para um arquivo Excel
+  function exportResults() {
+    let xlsContent = `<table border="1"><tr><th>Nome</th><th>RA</th><th>Nota Total</th></tr>`;
+    
+    studentsResults.forEach(result => {
+      xlsContent += `<tr><td>${result.student.nome}</td><td>${result.student.ra}</td><td>${result.answers.reduce((a, b) => a + b, 0)}</td></tr>`;
+    });
+
+    xlsContent += `</table>`;
+
+    const blob = new Blob([xlsContent], { type: 'application/vnd.ms-excel' });
+    const link = document.createElement("a");
+    link.href = URL.createObjectURL(blob);
+    link.download = "resultados_avaliacao.xls";
+    document.body.appendChild(link);
+    link.click();
+  }
+
+  // Inicializa a página
+  window.onload = () => {
+    loadQuestions();
+    loadStudentsMenu();
+    showStudent(currentIndex);  // Mostra o primeiro aluno
+  };
+</script>
+
+</body>
+</html>
